@@ -31,7 +31,7 @@ for report_path in reports:
     row_values['report_path'] = report_path
     rows.append(row_values)
 
-scores = pd.DataFrame(rows)
+scores = pd.DataFrame(rows).sort_values(by = 'timestamp')
 print(scores.head())
 scores.to_csv(out_file, index=False)
 print(f"Output written to {out_file}")
