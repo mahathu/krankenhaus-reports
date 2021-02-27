@@ -1,13 +1,13 @@
 # Zeilen mit einem # am Anfang werden ignoriert, so können 
 # z.B. einzelne Krankenhäuser auskommentiert werden.
 
-https://sankt-gertrauden.de
-https://krankenhaus-bethel-berlin.de
-https://franziskus-berlin.de
-https://krankenhaus-waldfriede.de
-#https://sjk.de
-#https://helios-gesundheit.de/kliniken/berlin-buch
-#https://vivantes.de/fuer-sie-vor-ort/klinikum-im-friedrichshain-landsberger-allee/
-#https://juedisches-krankenhaus.de
-#https://alexianer-berlin-hedwigkliniken.de
-#https://ukb.de
+http://sankt-gertrauden.de
+http://krankenhaus-bethel-berlin.de
+http://franziskus-berlin.de
+http://krankenhaus-waldfriede.de
+http://sjk.de
+http://helios-gesundheit.de/kliniken/berlin-buch
+http://vivantes.de/fuer-sie-vor-ort/klinikum-im-friedrichshain-landsberger-allee/
+http://juedisches-krankenhaus.de
+http://alexianer-berlin-hedwigkliniken.de
+http://ukb.de

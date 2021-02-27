@@ -27,9 +27,11 @@ for report_path in reports:
     }
     row_values['hospital_url'] = report_data['requestedUrl']
     row_values['timestamp'] = report_data['fetchTime']
+    row_values['date'] = report_path.split('/')[1]
     row_values['report_path'] = report_path
     rows.append(row_values)
 
 scores = pd.DataFrame(rows)
+print(scores.head())
 scores.to_csv(out_file, index=False)
 print(f"Output written to {out_file}")
