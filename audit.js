@@ -2,6 +2,7 @@
 
 const fs = require('fs');
 const lighthouse = require('lighthouse');
+const lighthouse_desktop_config = require('lighthouse/lighthouse-core/config/desktop-config')
 const chromeLauncher = require('chrome-launcher');
 const path = require('path');
 
@@ -9,7 +10,16 @@ const URL_FILE_PATH = 'urls.txt';
 const LOG_FILE_PATH = 'log.txt';
 const N_RUNS_PER_WEBSITE = 5;
 const OUTPUT_DIRECTORY = "reports";
-const OUTPUT_FORMAT = "json";
+
+let lighthouse_options = {
+    // logLevel: 'info',
+    onlyCategories: [
+        'performance',
+        'accessibility',
+        'best-practices',
+        'seo'],
+    output: "json",
+};
 
 /* Diese Funktion gibt den string aus und 
 schreibt ihn gleichzeitig ins logfile. */
@@ -23,21 +33,9 @@ function log(string){
 
 /* Führt den Lighthouse audit n mal aus und speichert
 das Ergebnis anschließend in einer neuen JSON-Datei */
-function run_audit(url, port, filePath){
-    const lh_options = {
-        // logLevel: 'info',
-        onlyCategories: [
-            'performance',
-            'accessibility',
-            'best-practices',
-            'seo'],
-        preset: 'desktop',
-        output: OUTPUT_FORMAT,
-        port: port
-    };
-
+function run_audit(url, filePath){
     try {
-        return lighthouse(url, lh_options).then( results => {
+        return lighthouse(url, lighthouse_options, lighthouse_desktop_config).then( results => {
             fs.writeFileSync(filePath, results.report);
 
             /*das JSON-Objekt, das in filePath geschrieben wurde,
@@ -96,6 +94,9 @@ try {
 let urls = data.split('\n');
 
 chromeLauncher.launch({chromeFlags: ['--headless']}).then( async chrome => {
+    lighthouse_options.port = chrome.port; /* Den Lighthouse-Run-Optionen den Port auf
+    dem Chrome läuft hinzufügen */
+
     // #3 für jede gelesene URL n mal den Test ausführen:
     // siehe auch: https://github.com/GoogleChrome/lighthouse/blob/master/docs/variability.md
     
@@ -108,11 +109,11 @@ chromeLauncher.launch({chromeFlags: ['--headless']}).then( async chrome => {
         for(let run_number = 1; run_number < N_RUNS_PER_WEBSITE+1; run_number++){
             log(`Running lighthouse audit #${run_number} for ${url}...`);
             
-            let fileName = `${folderName}-${url.split('//')[1]}-report-${run_number}.${OUTPUT_FORMAT}`;
+            let fileName = `${folderName}-${url.split('//')[1]}-report-${run_number}.${lighthouse_options.output}`;
             let filePath = path.join(OUTPUT_DIRECTORY, folderName, fileName);
 
             try {
-                await run_audit(url, chrome.port, filePath);
+                await run_audit(url, filePath);
             } catch(error_msg) {
                 log(error_msg);
             }
