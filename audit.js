@@ -31,7 +31,8 @@ function run_audit(url, port, filePath){
             'accessibility',
             'best-practices',
             'seo'],
-        output: OUTPUT_FORMAT, 
+        preset: 'desktop',
+        output: OUTPUT_FORMAT,
         port: port
     };
 
@@ -44,7 +45,7 @@ function run_audit(url, port, filePath){
             log(`Report finished. Output saved to ${filePath}`);
         });
     } catch (error) {
-        log(`Fehler bei URL ${url}: ${error.message}`);
+        return `Fehler bei URL ${url}: ${error.message}`;
     }
 }
 
@@ -110,7 +111,11 @@ chromeLauncher.launch({chromeFlags: ['--headless']}).then( async chrome => {
             let fileName = `${folderName}-${url.split('//')[1]}-report-${run_number}.${OUTPUT_FORMAT}`;
             let filePath = path.join(OUTPUT_DIRECTORY, folderName, fileName);
 
-            await run_audit(url, chrome.port, filePath);
+            try {
+                await run_audit(url, chrome.port, filePath);
+            } catch(error_msg) {
+                log(error_msg);
+            }
             /* Lighthouse-Calls müssen synchron (nacheinander) ausgeführt
             werden, sonst kommen sie durcheinander. Daher "await" */
         }
