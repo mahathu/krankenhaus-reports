@@ -1,5 +1,6 @@
 {
   "dependencies": {
-    "lighthouse": "^7.1.0"
+    "lighthouse": "^7.1.0",
+    "read-excel-file": "^5.0.0"
   }
 }

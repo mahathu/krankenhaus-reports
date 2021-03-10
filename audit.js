@@ -5,11 +5,14 @@ const lighthouse = require('lighthouse');
 const lighthouse_desktop_config = require('lighthouse/lighthouse-core/config/desktop-config')
 const chromeLauncher = require('chrome-launcher');
 const path = require('path');
-
-const URL_FILE_PATH = 'urls.txt';
+const { exit } = require('process');
+const readXlsxFile = require('read-excel-file/node');
+const URL_FILE_PATH = 'data/urls.txt';
 const LOG_FILE_PATH = 'log.txt';
-const N_RUNS_PER_WEBSITE = 5;
+const N_RUNS_PER_WEBSITE = 1;
 const OUTPUT_DIRECTORY = "reports";
+
+const XLSX_URL_COLUMN = 4;
 
 let lighthouse_options = {
     // logLevel: 'info',
@@ -19,6 +22,14 @@ let lighthouse_options = {
         'best-practices',
         'seo'],
     output: "json",
+};
+
+//special options to only test if URLS are working:
+let lighthouse_options_url_testing = {
+    onlyCategories: ['performance'],
+    disableNetworkThrottling: true,
+    // disableCpuThrottling: true,
+    // disableDeviceEmulation: true,
 };
 
 /* Diese Funktion gibt den string aus und 
@@ -33,14 +44,17 @@ function log(string){
 
 /* Führt den Lighthouse audit n mal aus und speichert
 das Ergebnis anschließend in einer neuen JSON-Datei */
-function run_audit(url, filePath){
+function run_audit(url, filePath, save_report=true){
     try {
-        return lighthouse(url, lighthouse_options, lighthouse_desktop_config).then( results => {
-            fs.writeFileSync(filePath, results.report);
+        return lighthouse(url, lighthouse_options_url_testing, lighthouse_desktop_config).then( results => {
 
-            /*das JSON-Objekt, das in filePath geschrieben wurde,
-            ist auch unter results.lhr als JS-Objekt verfügbar */
-            log(`Report finished. Output saved to ${filePath}`);
+            if(save_report){
+                fs.writeFileSync(filePath, results.report);
+
+                /*das JSON-Objekt, das in filePath geschrieben wurde,
+                ist auch unter results.lhr als JS-Objekt verfügbar */
+                log(`Report finished. Output saved to ${filePath}`);
+            } else return results.lhr;
         });
     } catch (error) {
         return `Fehler bei URL ${url}: ${error.message}`;
@@ -83,47 +97,65 @@ if(! fs.existsSync(report_directory)){
 }
 
 // #2 - URLS einlesen
-let data;
+let url_file_content, xlsx_rows;
 try {
-    data = fs.readFileSync(URL_FILE_PATH, 'utf8');
+    url_file_content = fs.readFileSync(URL_FILE_PATH, 'utf8');
 } catch (err) {
     log("Fehler beim Lesen der URL-Liste: " + err);
     process.exit(1);
 }
 
-let urls = data.split('\n');
+let urls = url_file_content.split('\n');
 
-chromeLauncher.launch({chromeFlags: ['--headless']}).then( async chrome => {
-    lighthouse_options.port = chrome.port; /* Den Lighthouse-Run-Optionen den Port auf
-    dem Chrome läuft hinzufügen */
-
-    // #3 für jede gelesene URL n mal den Test ausführen:
-    // siehe auch: https://github.com/GoogleChrome/lighthouse/blob/master/docs/variability.md
+readXlsxFile('data/Krankenhausliste1.xlsx').then((rows) => {
+    let xlsx_urls = rows.map(row => row[XLSX_URL_COLUMN]);
+    let csv_rows = 'url, runWarnings, notiz\n';
+    xlsx_urls.shift(); // ignore header row
+    chromeLauncher.launch({chromeFlags: ['--headless']}).then( async chrome => {
+        lighthouse_options.port = chrome.port; /* Den Lighthouse-Run-Optionen den Port auf dem Chrome läuft hinzufügen */
+        lighthouse_options_url_testing.port = chrome.port;
     
-    for (let url of urls) {
-        if (url.startsWith('#') || !url.trim()){ //Überspringe leere Zeilen oder solche, die mit '#' anfangen
-            //log(url, "übersprungen");
-            continue;
-        };
+        // #3 für jede gelesene URL n mal den Test ausführen:
+        // siehe auch: https://github.com/GoogleChrome/lighthouse/blob/master/docs/variability.md
+        
+        for (let [i, url] of xlsx_urls.entries()) {
+            if (url == null || url.startsWith('#') || !url.trim()){ //Überspringe leere Zeilen oder solche, die mit '#' anfangen
+                csv_str = `null, URL leer, url leer\n`;
+                continue;
+            };
 
-        for(let run_number = 1; run_number < N_RUNS_PER_WEBSITE+1; run_number++){
-            log(`Running lighthouse audit #${run_number} for ${url}...`);
-            
-            let fileName = `${folderName}-${url.split('//')[1]}-report-${run_number}.${lighthouse_options.output}`;
-            let filePath = path.join(OUTPUT_DIRECTORY, folderName, fileName);
-
-            try {
-                await run_audit(url, filePath);
-            } catch(error_msg) {
-                log(error_msg);
+            let note = '';
+            if (! url.startsWith('http') ){
+                url = 'http://'+url;
+                note = '"http://"-Prefix manuell hinzugefügt'
             }
-            /* Lighthouse-Calls müssen synchron (nacheinander) ausgeführt
-            werden, sonst kommen sie durcheinander. Daher "await" */
-        }
-    };
-
-    await chrome.kill();
-    log("Alle Audits abgeschlossen, Chrome-Prozess beendet.");
-    log_stream.end(); // Stream für das logfile schließen
     
-});
+    
+            for(let run_number = 1; run_number < N_RUNS_PER_WEBSITE+1; run_number++){
+                log(`[${i+1} / ${xlsx_urls.length}] Running lighthouse audit #${run_number} for ${url}...`);
+                
+                let fileName = `${folderName}-${url.split('//')[1]}-report-${run_number}.${lighthouse_options.output}`;
+                let filePath = path.join(OUTPUT_DIRECTORY, folderName, fileName);
+    
+                try {
+                    let lhr = await run_audit(url, filePath, false);
+                    let runWarnings = lhr['runWarnings'].join();
+                    csv_str = `${url}, ${runWarnings}, ${note}\n`;
+                } catch(error_msg) {
+                    log("Lighthouse Error: " + error_msg);
+                    csv_str = `${url}, INVALID URL, ${note}\n`;
+                }
+                csv_rows += csv_str;
+                log(csv_str.substring(0, csv_str.length-2));
+                /* Lighthouse-Calls müssen synchron (nacheinander) ausgeführt
+                werden, sonst kommen sie durcheinander. Daher "await" */
+            }
+        };
+    
+        await chrome.kill();
+        log("Alle Audits abgeschlossen, Chrome-Prozess beendet.");
+        log_stream.end(); // Stream für das logfile schließen
+        
+        fs.writeFileSync("URL_DIAGNOSTICS.csv", csv_rows);
+    });
+})
