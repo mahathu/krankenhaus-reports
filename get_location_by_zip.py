@@ -4,6 +4,7 @@
 import requests
 from termcolor import cprint
 import pandas as pd
+exit()
 
 API_BASE_URL = 'https://app.zipcodebase.com/api/v1/search'
 n_zipcodes_per_request = 50 # max is 100

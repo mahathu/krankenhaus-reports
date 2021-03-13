@@ -5,7 +5,6 @@ const lighthouse = require('lighthouse');
 const lighthouse_desktop_config = require('lighthouse/lighthouse-core/config/desktop-config')
 const chromeLauncher = require('chrome-launcher');
 const path = require('path');
-const { exit } = require('process');
 const readXlsxFile = require('read-excel-file/node');
 const URL_FILE_PATH = 'source_data/urls.txt';
 const LOG_FILE_PATH = 'log.txt';
@@ -46,7 +45,7 @@ function log(string){
 das Ergebnis anschließend in einer neuen JSON-Datei */
 function run_audit(url, filePath, save_report=true){
     try {
-        return lighthouse(url, lighthouse_options_url_testing, lighthouse_desktop_config).then( results => {
+        return lighthouse(url, lighthouse_options, lighthouse_desktop_config).then( results => {
 
             if(save_report){
                 fs.writeFileSync(filePath, results.report);
@@ -132,21 +131,19 @@ readXlsxFile('source_data/Krankenhausliste1.xlsx').then((rows) => {
     
     
             for(let run_number = 1; run_number < N_RUNS_PER_WEBSITE+1; run_number++){
-                log(`[${i+1} / ${xlsx_urls.length}] Running lighthouse audit #${run_number} for ${url}...`);
+                log(`[${i+run_number} / ${xlsx_urls.length*N_RUNS_PER_WEBSITE}] Running lighthouse audit #${run_number} for ${url}...`);
                 
                 let fileName = `${folderName}-${url.split('//')[1]}-report-${run_number}.${lighthouse_options.output}`;
                 let filePath = path.join(OUTPUT_DIRECTORY, folderName, fileName);
     
                 try {
-                    let lhr = await run_audit(url, filePath, false);
-                    let runWarnings = lhr['runWarnings'].join();
-                    csv_str = `${url}, ${runWarnings}, ${note}\n`;
+                    let lhr = await run_audit(url, filePath, true);
+                    //let runWarnings = lhr['runWarnings'].join();
+                    //csv_str = `${url}, ${runWarnings}, ${note}\n`;
                 } catch(error_msg) {
                     log("Lighthouse Error: " + error_msg);
-                    csv_str = `${url}, INVALID URL, ${note}\n`;
+                    //csv_str = `${url}, INVALID URL, ${note}\n`;
                 }
-                csv_rows += csv_str;
-                log(csv_str.substring(0, csv_str.length-2));
                 /* Lighthouse-Calls müssen synchron (nacheinander) ausgeführt
                 werden, sonst kommen sie durcheinander. Daher "await" */
             }
@@ -154,8 +151,6 @@ readXlsxFile('source_data/Krankenhausliste1.xlsx').then((rows) => {
     
         await chrome.kill();
         log("Alle Audits abgeschlossen, Chrome-Prozess beendet.");
-        log_stream.end(); // Stream für das logfile schließen
-        
-        fs.writeFileSync("URL_DIAGNOSTICS.csv", csv_rows);
+        log_stream.end(); // Stream für das logfile schließen        
     });
 })
