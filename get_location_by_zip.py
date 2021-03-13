@@ -4,48 +4,45 @@
 import requests
 from termcolor import cprint
 import pandas as pd
-exit()
+import math
 
 API_BASE_URL = 'https://app.zipcodebase.com/api/v1/search'
-n_zipcodes_per_request = 50 # max is 100
-output_data_dir = 'output_data'
+N_ZIPCODES_PER_REQUEST = 50 # max is 100
+OUT_DIR = 'output_data'
 
 ### step 1: gather zip codes ###
-
 df = pd.read_excel('source_data/Krankenhauslistevers2wind.xlsx')
 
-other_zips = [] # for cells in which multiple, '/' separated zip codes are given
-extract_zips = lambda s: other_zips.extend(s.split('/')) if '/' in s else s
-
 zipcodes = df['PLZ'].dropna().astype("string") # remove empty vals
+
+# some elements contain not a single zip code, but
+# instead a list of '/' separated codes. The following
+# line appends the zip codes extracted from such elements.
+zipcodes = zipcodes.append(pd.Series(
+    [z for zip_list in zipcodes for z in zip_list.split("/") if "/" in zip_list]
+))
 zipcodes = zipcodes.str.strip() # strip whitespace from values
-zipcodes.apply(extract_zips) # save all the '/'-separated zips in an array
 zipcodes = zipcodes[zipcodes.map(len) == 5] # drop all values of length != 5
-print(f"{len(zipcodes)} out of {len(df)} total lines (-{len(df) - len(zipcodes)}) remain after filtering rows with multiple zip codes and NA values.")
-
-zipcodes = zipcodes.append(pd.Series(other_zips))
-print(f"{len(other_zips)} zip codes added from hospitals with multiple given zip codes. ({len(zipcodes)} total)")
-
-zipcodes = zipcodes.drop_duplicates().sort_values().tolist()
-# PLZs können/sollten mMn nicht zu ints gecasted werden, weil einige in DE mit 0 beginnen
-print(f"{len(zipcodes)} unique zip codes after removing duplicates.\n")
-
+zipcodes = zipcodes.drop_duplicates().sort_values().tolist() # drop dupes, sort values
+print(f"{len(zipcodes)} unique zip codes found.")
 
 ### step 2: make requests ###
+
+# Uncomment the following two lines to save API calls when debugging:
+# N_ZIPCODES_PER_REQUEST = 2
+# zipcodes = zipcodes[:2]
+
+input(f"Press enter to continue ({math.ceil(len(zipcodes)/N_ZIPCODES_PER_REQUEST)} API calls will be made!)")
 
 with open('zipcodebase_api_key', 'r') as api_file:
     request_headers = {"apikey": api_file.read()}
 
-# Uncomment the following two lines to save API calls when debugging:
-# n_zipcodes_per_request = 2
-# zipcodes = zipcodes[:2]
-
 zipcode_dicts = []
 
-for i in range(0, len(zipcodes), n_zipcodes_per_request):
-    print(f"Requesting data for zip codes {i+1} through {min(i+n_zipcodes_per_request, len(zipcodes))}... ", end='')
+for i in range(0, len(zipcodes), N_ZIPCODES_PER_REQUEST):
+    print(f"Requesting data for zip codes {i+1} through {min(i+N_ZIPCODES_PER_REQUEST, len(zipcodes))}... ", end='')
 
-    zips_string = ','.join(zipcodes[i:i+n_zipcodes_per_request])
+    zips_string = ','.join(zipcodes[i:i+N_ZIPCODES_PER_REQUEST])
     request_params = (
         ('country', 'DE'),
         ('codes', zips_string),
@@ -57,10 +54,10 @@ for i in range(0, len(zipcodes), n_zipcodes_per_request):
     try:
         results = response.json()['results']
     except ValueError:
-        print("Error decoding response data!")
-        break
+        cprint(f"Error decoding response data for input zip codes: {zips_string}", red)
+        continue
     
-    # for each of the n_zipcodes_per_request:
+    # for each of the n zipcodes do this:
     for zip, zip_results in results.items():
         # zip_results is a list of areas corresponding to the zip code (can be >1)
         # for example, 01067 gives: 'Dresden', 'Dresden Friedrichstadt' and 'Dresden Innere Altstadt'
@@ -69,7 +66,7 @@ for i in range(0, len(zipcodes), n_zipcodes_per_request):
 zipcode_data = pd.DataFrame(zipcode_dicts)
 zipcode_data.drop(columns=['state_code', 'province_code'], inplace=True)
 
-zipcode_data.to_csv(f'{output_data_dir}/zipcode_data.csv', index=False)
-zipcode_data.to_pickle(f'{output_data_dir}/zipcode_data.pkl')
+zipcode_data.to_csv(f'{OUT_DIR}/zipcode_data.csv', index=False)
+zipcode_data.to_pickle(f'{OUT_DIR}/zipcode_data.pkl')
 
-cprint(f"Output saved to {output_data_dir}.", "green")
+cprint(f"Output saved to {OUT_DIR}.", "green")
