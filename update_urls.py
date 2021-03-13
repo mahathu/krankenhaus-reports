@@ -23,12 +23,12 @@ for i, row in kh_liste.iterrows():
         kh_liste.at[i, 'url_updated_comment'] = "URL leer"
         continue
     if not row['Webside'].startswith('http'):
+        prefix = 'http://'
         if "Try testing the second URL directly." in diagnostic_notes.at[i, 'runWarnings']:
-            kh_liste.at[i, 'url_updated'] = 'https://' + kh_liste.at[i, 'Webside']
-            kh_liste.at[i, 'url_updated_comment'] = "https-Präfix ergänzt"
-        else:
-            kh_liste.at[i, 'url_updated'] = 'http://' + kh_liste.at[i, 'Webside']
-            kh_liste.at[i, 'url_updated_comment'] = "http-Präfix ergänzt"
+            prefix = 'https://'
+        
+        kh_liste.at[i, 'url_updated'] = prefix + kh_liste.at[i, 'Webside']
+        kh_liste.at[i, 'url_updated_comment'] = f'"{prefix}"-Präfix ergänzt'
 
 kh_liste.to_excel('source_data/Krankenhausliste_URLs_updated.xlsx')
 print(kh_liste)
