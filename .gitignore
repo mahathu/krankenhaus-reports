@@ -2,6 +2,7 @@
 node_modules/
 __pycache__/
 .venv/
+.vscode/
 *.py[cod]
 source_data/
 reports/
