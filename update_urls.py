@@ -8,8 +8,8 @@
 
 import pandas as pd
 
-kh_liste = pd.read_excel('data/Krankenhausliste1.xlsx')
-diagnostic_notes = pd.read_csv('data/URL_DIAGNOSTICS.csv')
+kh_liste = pd.read_excel('source_data/Krankenhausliste1.xlsx')
+diagnostic_notes = pd.read_csv('source_data/URL_DIAGNOSTICS.csv')
 
 kh_liste['Webside'] = kh_liste['Webside'].astype(str)
 
@@ -30,5 +30,5 @@ for i, row in kh_liste.iterrows():
             kh_liste.at[i, 'url_updated'] = 'http://' + kh_liste.at[i, 'Webside']
             kh_liste.at[i, 'url_updated_comment'] = "http-Präfix ergänzt"
 
-kh_liste.to_excel('data/Krankenhausliste_URLs_updated.xlsx')
+kh_liste.to_excel('source_data/Krankenhausliste_URLs_updated.xlsx')
 print(kh_liste)

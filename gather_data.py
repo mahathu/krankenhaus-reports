@@ -3,7 +3,7 @@ import pandas as pd
 
 output_format = 'json'
 reports_path = 'reports'
-out_file = 'data/scores.csv'
+out_file = 'source_data/scores.csv'
 
 # for subdir in [
 #         f for f in os.listdir(reports_path) if 

@@ -7,7 +7,7 @@ const chromeLauncher = require('chrome-launcher');
 const path = require('path');
 const { exit } = require('process');
 const readXlsxFile = require('read-excel-file/node');
-const URL_FILE_PATH = 'data/urls.txt';
+const URL_FILE_PATH = 'source_data/urls.txt';
 const LOG_FILE_PATH = 'log.txt';
 const N_RUNS_PER_WEBSITE = 1;
 const OUTPUT_DIRECTORY = "reports";
@@ -107,7 +107,7 @@ try {
 
 let urls = url_file_content.split('\n');
 
-readXlsxFile('data/Krankenhausliste1.xlsx').then((rows) => {
+readXlsxFile('source_data/Krankenhausliste1.xlsx').then((rows) => {
     let xlsx_urls = rows.map(row => row[XLSX_URL_COLUMN]);
     let csv_rows = 'url, runWarnings, notiz\n';
     xlsx_urls.shift(); // ignore header row
