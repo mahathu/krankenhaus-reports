@@ -1,9 +1,9 @@
 .DS_Store
 node_modules/
-data*
 __pycache__/
 .venv/
 *.py[cod]
+source_data/
 reports/
 scores.csv
 log.txt
