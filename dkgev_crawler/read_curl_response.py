@@ -27,4 +27,4 @@ for s in properties:
 df = pd.DataFrame(json.loads(file_content))
 df.drop(['color', 'zIndex'], axis=1, inplace=True)
 
-df.to_pickle("Krankenhaus_df.tbl")
+df.to_pickle("Krankenhaus_df.pkl")

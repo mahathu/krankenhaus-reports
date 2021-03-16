@@ -5,9 +5,9 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.basemap import Basemap
 from termcolor import cprint
 
-MARKERSIZE_MAX = 15
+MARKERSIZE_MAX = 10
 MARKERSIZE_MIN = 2
-DEBUG = False # use lower resolution, and open picture instead of saving it
+DEBUG = 0 # use lower resolution, and open picture instead of saving it
 
 def get_x_and_y_from_zip(zip):
     try:
@@ -19,17 +19,19 @@ def get_x_and_y_from_zip(zip):
     return m(row['longitude'], row['latitude'])
 
 zip_locations = pd.read_pickle('output_data/zipcode_data.pkl')
-hospitals = pd.read_excel('source_data/Krankenhauslistevers2wind.xlsx')
+#hospitals = pd.read_excel('source_data/Krankenhauslistevers2wind.xlsx')
+hospitals = pd.read_csv('dkgev_crawler/Krankenhaus_latlng.csv')
 
-betten_max = 3000 # hospitals['Betten'].max() angeblich 192154 :D
+betten_max = hospitals['n_Betten'].max()
 
-hospitals = hospitals.dropna(subset=['PLZ'])
-hospitals['PLZ'] = hospitals['PLZ'].astype('string') # convert from obj to str
-hospitals['PLZ'] = hospitals['PLZ'].apply(lambda s: s.split('/')[0].strip()) # if value is list of zip codes, take the first one and drop rest
+# hospitals = hospitals.dropna(subset=['PLZ'])
+# hospitals['PLZ'] = hospitals['PLZ'].astype('string') # convert from obj to str
+# hospitals['PLZ'] = hospitals['PLZ'].apply(lambda s: s.split('/')[0].strip()) # if value is list of zip codes, take the first one and drop rest
 
 # assign each hospital a random score:
 hospitals['score'] = np.random.uniform(size=len(hospitals))
 
+print("Building basemap...")
 m = Basemap(
     projection='cass', 
     resolution='c' if DEBUG else 'f',
@@ -40,20 +42,24 @@ m = Basemap(
     lon_0=10.4541194
 )
 
+print("Drawing topology...")
 m.etopo(scale=.1 if DEBUG else 3, alpha=.2)
 
+print("Drawing country lines...")
 m.drawcoastlines(linewidth=.5)
 m.drawcountries()
-#m.drawlsmask()
-# plt.set_cmap('viridis')
 
 # add x and y vals to dataframe:
-hospitals['x'], hospitals['y'] = zip(*hospitals['PLZ'].map(get_x_and_y_from_zip))
+# hospitals['x'], hospitals['y'] = zip(*hospitals['PLZ'].map(get_x_and_y_from_zip))
+xy= pd.DataFrame( hospitals.apply(
+    lambda row: m(row['lng'],row['lat']),
+    axis = 1
+).tolist())
 
 plt.scatter(
-    x=hospitals['x'], 
-    y=hospitals['y'], 
-    s=MARKERSIZE_MIN + (hospitals['Betten'] / betten_max * (MARKERSIZE_MAX-MARKERSIZE_MIN)),
+    x=xy[0], 
+    y=xy[1], 
+    s=MARKERSIZE_MIN + (hospitals['n_Betten'] / betten_max * (MARKERSIZE_MAX-MARKERSIZE_MIN)),
     c=hospitals['score'],
     alpha=1
 )
