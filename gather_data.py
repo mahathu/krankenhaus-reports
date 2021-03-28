@@ -18,6 +18,8 @@ reports = [
 ]
 rows = []
 
+print(f"Reading {len(reports)} report files.")
+
 for report_path in reports:
     with open(report_path) as f:
         report_data = json.load(f)
@@ -25,7 +27,7 @@ for report_path in reports:
     row_values = {
         f'{category}-score': report_data['categories'][category]['score'] for category in report_data['categories']
     }
-    row_values['hospital_url'] = report_data['requestedUrl']
+    row_values['url'] = report_data['requestedUrl']
     row_values['timestamp'] = report_data['fetchTime']
     row_values['date'] = report_path.split('/')[1]
     row_values['report_path'] = report_path
